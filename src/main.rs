@@ -74,16 +74,14 @@ fn hf_calc(n: u32, r: f64, zeta_1: f64, zeta_2: f64, z_a: u32, z_b: u32) {
     let mut a1 = expons.clone();
     a1.iter_mut().for_each(|x| *x *= zeta_1.powf(2.));
     let mut d1 = coeffs.clone();
-    d1
-        .indexed_iter_mut()
+    d1.indexed_iter_mut()
         .for_each(|(idx, x)| *x *= (&a1[idx] * 2. / PI).powf(0.75));
 
     // basis functions on atom 2
     let mut a2 = expons.clone();
     a2.iter_mut().for_each(|x| *x *= zeta_2.powf(2.));
     let mut d2 = coeffs.clone();
-    d2
-        .indexed_iter_mut()
+    d2.indexed_iter_mut()
         .for_each(|(idx, x)| *x *= (&a2[idx] * 2. / PI).powf(0.75));
     println!("{:?}", d2);
 
@@ -129,7 +127,11 @@ fn hf_calc(n: u32, r: f64, zeta_1: f64, zeta_2: f64, z_a: u32, z_b: u32) {
             v12b += nuclear_attraction_integral(a1[i], a2[j], r, r_bp, z_b) * d1[i] * d2[j];
         }
     }
-	println!("s12: {} \tt11: {}\tt12: {}\tt22: {}\tv11a: {}\tv11b: {}\tv12a: {}\tv12b: {}", s12, t11, t12, t22, v11a, v11b, v12a, v12b);
+	// all these integrals are correct
+    println!(
+        "s12: {} \tt11: {}\tt12: {}\tt22: {}\tv11a: {}\tv11b: {}\tv12a: {}\tv12b: {}",
+        s12, t11, t12, t22, v11a, v11b, v12a, v12b
+    );
     let mut v1111 = 0.;
     let mut v2111 = 0.;
     let mut v2121 = 0.;
@@ -145,6 +147,7 @@ fn hf_calc(n: u32, r: f64, zeta_1: f64, zeta_2: f64, z_a: u32, z_b: u32) {
                     let j: usize = j.try_into().unwrap();
                     let k: usize = k.try_into().unwrap();
                     let l: usize = l.try_into().unwrap();
+
                     let r_ap = a2[i] * r / (a2[i] + a1[j]);
                     let r_bp = r - r_ap;
                     let r_aq = a2[k] * r / (a2[k] + a1[l]);
@@ -185,7 +188,7 @@ fn hf_calc(n: u32, r: f64, zeta_1: f64, zeta_2: f64, z_a: u32, z_b: u32) {
         }
     }
 
-	println!("v1111: {} \tv2211: {}", v1111, v2211);
+    println!("v1111: {} \tv2211: {}\tv2222: {}\tv2121: {}", v1111, v2211, v2222, v2121);
     let (h, s, x, xt, tt) = collect(
         s12, t11, t12, t22, v11a, v11b, v22a, v22b, v12a, v12b, v1111, v2111, v2121, v2211, v2221,
         v2222,
@@ -292,7 +295,7 @@ fn scf(
     xt: Array2<f64>,
     tt: Array4<f64>,
 ) {
-    let criteria = 1e-3;
+    let criteria = 5e-4;
     let maxiter = 50;
     let mut iter = 0;
 
