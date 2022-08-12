@@ -113,22 +113,22 @@ fn hf_calc(n: u32, r: f64, zeta_1: f64, zeta_2: f64, z_a: u32, z_b: u32) {
     let mut v12b = 0.;
 
     // loop over the number of electrons
-    for i  in 1..n + 1 {
-        for j in 1..n + 1 {
+    for i  in 0..n {
+        for j in 0..n {
 			let i: usize = i.try_into().unwrap();
 			let j: usize = j.try_into().unwrap();
 			let r_ap = a2[j] * r / (a1[i] + a2[j]);
 			let r_bp = r - r_ap;
-            s12 += overlap_integral(a1[i], a2[j], r);
-            t11 += kinetic_integral(a1[i], a1[j], 0.);
-            t12 += kinetic_integral(a1[i], a2[j], r);
-            t22 += kinetic_integral(a1[i], a2[j], 0.);
-            v11a += nuclear_attraction_integral(a1[i], a1[j], 0., 0., z_a);
-            v11b += nuclear_attraction_integral(a1[i], a1[j], 0., 0., z_b);
-            v22a += nuclear_attraction_integral(a2[i], a2[j], 0., 0., z_a);
-            v22b += nuclear_attraction_integral(a2[i], a2[j], 0., 0., z_b);
-            v12a += nuclear_attraction_integral(a1[i], a2[j], r, r_ap, z_a);
-            v12b += nuclear_attraction_integral(a1[i], a2[j], r, r_bp, z_b);
+            s12 += overlap_integral(a1[i], a2[j], r) * d1[i] * d2[j];
+            t11 += kinetic_integral(a1[i], a1[j], 0.) * d1[i] * d1[j];
+            t12 += kinetic_integral(a1[i], a2[j], r) * d1[i] * d2[j];
+            t22 += kinetic_integral(a1[i], a2[j], 0.) * d2[i] * d2[j];
+            v11a += nuclear_attraction_integral(a1[i], a1[j], 0., 0., z_a) * d1[i] * d1[j];
+            v11b += nuclear_attraction_integral(a1[i], a1[j], 0., 0., z_b)* d1[i] * d1[j];
+            v22a += nuclear_attraction_integral(a2[i], a2[j], 0., 0., z_a)* d2[i] * d2[j];
+            v22b += nuclear_attraction_integral(a2[i], a2[j], 0., 0., z_b)* d2[i] * d2[j];
+            v12a += nuclear_attraction_integral(a1[i], a2[j], r, r_ap, z_a)* d1[i] * d2[j];
+            v12b += nuclear_attraction_integral(a1[i], a2[j], r, r_bp, z_b)* d1[i] * d2[j];
 
            
         }
@@ -140,10 +140,10 @@ fn hf_calc(n: u32, r: f64, zeta_1: f64, zeta_2: f64, z_a: u32, z_b: u32) {
 	let mut v2221 = 0.;
 	let mut v2222 = 0.;
 
-	for i in 1..n+1 {
-		for j in 1..n+1 {
-			for k in 1..n+1 {
-				for l in 1..n+1 {
+	for i in 0..n {
+		for j in 0..n {
+			for k in 0..n {
+				for l in 0..n {
 					let i: usize = i.try_into().unwrap();
 					let j: usize = j.try_into().unwrap();
 					let k: usize = k.try_into().unwrap();
@@ -153,12 +153,12 @@ fn hf_calc(n: u32, r: f64, zeta_1: f64, zeta_2: f64, z_a: u32, z_b: u32) {
 					let r_aq = a2[k] * r / (a2[k] + a1[l]);
 					let r_bq = r - r_aq;
 					let r_pq  = r_ap - r_aq;
-					v1111 += two_electron_integral(a1[i], a1[j], a1[k], a1[l], 0., 0., 0.);
-					v2111 += two_electron_integral(a2[i], a1[j], a1[k], a1[l], r, 0., r_ap);
-					v2121 += two_electron_integral(a2[i], a1[j], a2[k], a1[l], r, r, r_pq);
-					v2211 += two_electron_integral(a2[i], a2[j], a1[k], a1[l], 0., 0., r);
-					v2221 += two_electron_integral(a2[i], a2[j], a2[k], a1[l], 0., r, r_bq);
-					v2222 += two_electron_integral(a2[i], a2[j], a2[k], a2[l], 0., 0., 0.);
+					v1111 += two_electron_integral(a1[i], a1[j], a1[k], a1[l], 0., 0., 0.) * d1[i] * d1[j] * d1[k] * d1[l];
+					v2111 += two_electron_integral(a2[i], a1[j], a1[k], a1[l], r, 0., r_ap) * d2[i] * d1[j] * d1[k] * d1[l];
+					v2121 += two_electron_integral(a2[i], a1[j], a2[k], a1[l], r, r, r_pq) * d2[i] * d1[j] * d2[k] * d1[l];
+					v2211 += two_electron_integral(a2[i], a2[j], a1[k], a1[l], 0., 0., r) * d2[i] * d2[j] * d1[k] * d1[l];
+					v2221 += two_electron_integral(a2[i], a2[j], a2[k], a1[l], 0., r, r_bq) * d2[i] * d2[j] * d2[k] * d1[l];
+					v2222 += two_electron_integral(a2[i], a2[j], a2[k], a2[l], 0., 0., 0.) * d2[i] * d2[j] * d2[k] * d2[l];
 
 
 				}
@@ -180,14 +180,14 @@ fn collect(s12: f64, t11: f64, t12: f64, t22: f64, v11a: f64, v11b: f64, v22a: f
 	let mut x = Array::zeros((2,2));
 	// store two-electron integrals
 	let mut t = Array::zeros((2,2,2,2));
-
+	println!("{},{},{}", t11, v11a, v11b);
 	h[[0,0]] = t11 + v11a + v11b;
 	h[[0,1]] = t12 + v12a + v12b;
 	h[[1,0]] = h[[0,1]];
 	h[[1,1]] = t22 + v22a + v22b;
 
 	s[[0,1]] = s12;
-	s[[2,0]] = s12;
+	s[[1,0]] = s12;
 
 	t[[0,0,0,0]] = v1111;
 
@@ -220,6 +220,8 @@ fn collect(s12: f64, t11: f64, t12: f64, t22: f64, v11a: f64, v11b: f64, v22a: f
 
 	let xt = x.clone().reversed_axes();
 
+	println!("h: {:?}\ns: {:?}\nt: {:?}\n\n", h, s, t);
+
 	return (h, s, x, xt, t)
 
 }
@@ -241,7 +243,7 @@ fn compute_g_matrix(p: &Array2<f64>, tt: &Array4<f64>) -> Array2<f64> {
 
 fn scf(r: f64, z_a: u32, z_b: u32, h: Array2<f64>, s: Array2<f64>, x: Array2<f64>, xt: Array2<f64>, tt: Array4<f64>) {
 
-	let criteria = 1e-4;
+	let criteria = 1e-3;
 	let maxiter = 50;
 	let mut iter = 0;
 
@@ -267,7 +269,7 @@ fn scf(r: f64, z_a: u32, z_b: u32, h: Array2<f64>, s: Array2<f64>, x: Array2<f64
 				e_elec += 0.5 * p[[i,j]] * (h[[i,j]] + f[[i,j]]);
 			}
 		}
-		println!("Iteration: {}, \nEnergy: {}", &iter, &e_elec);
+		println!("Iteration: {}, \nEnergy: {}\n\n", &iter, &e_elec);
 
 		// Transform the fock matrix 
 		g = f.clone().dot(&x);

@@ -11,4 +11,4 @@ nalgebra = "0.31.1"
 ndarray = "0.15.6"
 rayon = "1.5.3"
 clap = { version = "3.2.16", features = ["derive"] }
-ndarray-linalg = "0.14.1"
+ndarray-linalg = {version = "0.14.1", features = ["openblas-static"]}

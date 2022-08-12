@@ -13,14 +13,20 @@ pub mod integrals {
 
     pub fn nuclear_attraction_integral(a: f64, b: f64, r_ab: f64, r_pc: f64, z_c: u32) -> f64 {
         // Computes the nuclear attraction integral for <A|-Z/r|B> two basis functions A and B at separation r
-        -2. * PI / (a + b)
+        let val = -2. * PI / (a + b)
             * z_c as f64
             * (-a * b / (a + b) * r_ab.powf(2.)).exp()
-            * f_0((a + b) * r_pc.powf(2.))
+            * f_0((a + b) * r_pc.powf(2.));
+		println!("Nuclear attraction integral: {}\n\n", val);
+		val
     }
 
     pub fn f_0(t: f64) -> f64 {
-        0.5 * (PI / t).powf(0.5) * erf(t.powf(0.5))
+		if t < 1e-6 {
+			 1. - t / 3.
+		} else {
+			0.5 * (PI / t).powf(0.5) * erf(t.powf(0.5))
+		}
     }
 
     pub fn two_electron_integral(
