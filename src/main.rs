@@ -49,20 +49,6 @@ struct Args {
 
 fn hf_calc(n: u32, r: f64, zeta_1: f64, zeta_2: f64, z_a: u32, z_b: u32) {
     // compute and store one- and two-electron integrals for the full basis set - assume no memory bottlebeck
-    // let coeffs = Array::from_shape_vec(
-    //     (3, 3),
-    //     vec![
-    //         1.0, 0.0, 0.0, 0.678914, 0.430129, 0.0, 0.444635, 0.535328, 0.154329,
-    //     ],
-    // )
-    // .unwrap();
-    // let alpha = Array::from_shape_vec(
-    //     (3, 3),
-    //     vec![
-    //         0.270950, 0.0, 0.0, 0.1151623, 0.851819, 0.0, 0.109818, 0.405771, 2.22766,
-    //     ],
-    // )
-    // .unwrap();
 
     // implement only sto-3g linear fits for now
     // these are the unnormalized coeffs
@@ -128,8 +114,7 @@ fn hf_calc(n: u32, r: f64, zeta_1: f64, zeta_2: f64, z_a: u32, z_b: u32) {
         }
     }
 	// all these integrals are correct
-    println!(
-        "s12: {} \tt11: {}\tt12: {}\tt22: {}\tv11a: {}\tv11b: {}\tv12a: {}\tv12b: {}",
+    dbg!(
         s12, t11, t12, t22, v11a, v11b, v12a, v12b
     );
     let mut v1111 = 0.;
@@ -162,39 +147,39 @@ fn hf_calc(n: u32, r: f64, zeta_1: f64, zeta_2: f64, z_a: u32, z_b: u32) {
                         * d2[i]
                         * d1[j]
                         * d1[k]
-                        * d1[l];
+                        * d1[l]; 
                     v2121 += two_electron_integral(a2[i], a1[j], a2[k], a1[l], r, r, r_pq)
                         * d2[i]
                         * d1[j]
                         * d2[k]
-                        * d1[l];
+                        * d1[l]; 
                     v2211 += two_electron_integral(a2[i], a2[j], a1[k], a1[l], 0., 0., r)
                         * d2[i]
                         * d2[j]
                         * d1[k]
-                        * d1[l];
+                        * d1[l]; 
                     v2221 += two_electron_integral(a2[i], a2[j], a2[k], a1[l], 0., r, r_bq)
                         * d2[i]
                         * d2[j]
                         * d2[k]
-                        * d1[l];
+                        * d1[l]; 
                     v2222 += two_electron_integral(a2[i], a2[j], a2[k], a2[l], 0., 0., 0.)
                         * d2[i]
                         * d2[j]
                         * d2[k]
-                        * d2[l];
+                        * d2[l]; 
                 }
             }
         }
     }
 
-    println!("v1111: {} \tv2211: {}\tv2222: {}\tv2121: {}", v1111, v2211, v2222, v2121);
-    let (h, s, x, xt, tt) = collect(
+    dbg!(v1111, v2211, v2222, v2121, v2221, v2111);
+    let (h, s, x, tt) = collect(
         s12, t11, t12, t22, v11a, v11b, v22a, v22b, v12a, v12b, v1111, v2111, v2121, v2211, v2221,
         v2222,
     );
 
-    scf(r, z_a, z_b, h, s, x, xt, tt);
+    scf(r, z_a, z_b, h, s, x, tt);
 }
 
 fn collect(
@@ -215,7 +200,6 @@ fn collect(
     v2221: f64,
     v2222: f64,
 ) -> (
-    Array2<f64>,
     Array2<f64>,
     Array2<f64>,
     Array2<f64>,
@@ -263,25 +247,20 @@ fn collect(
     x[[0, 1]] = 1. / (2. * (1. - s12)).sqrt();
     x[[1, 1]] = -x[[0, 1]];
 
-    let xt = x.clone().reversed_axes();
-
-    println!("h: {:?}\ns: {:?}\nt: {:?}\n\n", h, s, t);
-
-    return (h, s, x, xt, t);
+	dbg!(&x);
+    return (h, s, x, t);
 }
 
 fn compute_g_matrix(p: &Array2<f64>, tt: &Array4<f64>) -> Array2<f64> {
     let mut g = Array::zeros((2, 2));
-    for i in 0..2 {
-        for j in 0..2 {
-            for k in 0..2 {
-                for l in 0..2 {
-                    // coulomb - exchange * P matrix
-                    g[[i, j]] = p[[k, l]] * (tt[[i, j, k, l]] - 0.5 * tt[[i, j, k, l]])
-                }
-            }
-        }
-    }
+    
+	g.indexed_iter_mut().for_each(|((i, j), x)|{
+		for k in 0..2 {
+			for l in 0..2 {
+				*x += p[[k, l]] * (tt[[i, j, k, l]] - 0.5 * tt[[i, l,k,j]])
+			}
+		}
+	});
     g
 }
 
@@ -292,23 +271,23 @@ fn scf(
     h: Array2<f64>,
     s: Array2<f64>,
     x: Array2<f64>,
-    xt: Array2<f64>,
     tt: Array4<f64>,
 ) {
-    let criteria = 5e-4;
-    let maxiter = 50;
+    let criteria = 1e-4;
+    let maxiter = 25;
     let mut iter = 0;
 
     // initial guess at the density matrix, i.e. use core hamiltonian term only
     let mut p = Array::zeros((2, 2));
-    let mut f = h.clone();
-    let mut e_elec = 0.;
+    
+	let mut e_elec = 0.;
     while iter < maxiter {
+		let mut f = h.clone();
         iter += 1;
-        // generate the G matrix from P and the two electron integrals
+        // generate the G matrix from density matrix * two-electron integrals
         let mut g = compute_g_matrix(&p, &tt);
 
-        // generate fock matrix
+        // generate fock matrix, combine core and G matrices
 
         f.indexed_iter_mut().for_each(|((i, j), x)| *x += g[[i, j]]);
 
@@ -319,16 +298,20 @@ fn scf(
                 e_elec += 0.5 * p[[i, j]] * (h[[i, j]] + f[[i, j]]);
             }
         }
-        println!("Iteration: {}, \nEnergy: {}\n\n", &iter, &e_elec);
+        // println!("Iteration: {}, \nEnergy: {}\n\n", iter, e_elec);
+		dbg!(iter, e_elec, g, &f);
 
-        // Transform the fock matrix
-        g = f.clone().dot(&x);
-        let f_prime = xt.clone().dot(&g);
-
+        // Transform the fock matrix: f' = X± F X
+        // g = f.clone().dot(&x);
+        let f_prime = x.clone().reversed_axes().dot(&f.dot(&x));
+		// dbg!(&f_prime);
         // eigenvalues e (orbital energies), eigenvectors c_prime (transformed coefficient matrix)
-        let (e, c_prime) = f_prime.eigh(UPLO::Lower).unwrap();
+        let (e, c_prime) = f_prime.eigh(UPLO::Upper).unwrap();
+		// dbg!(&c_prime);
+		// dbg!(&e);
         // transform eigenvectors
         let c = x.clone().dot(&c_prime);
+		dbg!(&c);
 
         // compute new density matrix P
         let p_prev = p.clone();
@@ -340,6 +323,7 @@ fn scf(
                 p[[i, j]] += 2. * c[[i, 0]] * c[[j, 0]]
             }
         }
+		dbg!(&p);
         // println!("new density matrix{:?}", p);
 
         // compute delta in P matrix
@@ -351,7 +335,7 @@ fn scf(
         }
         delta = (delta / 4.).sqrt();
 
-        println!("Iter: {}, \nDelta: {}", iter, delta);
+        println!("Iter: {}, \nDelta: {}\n\n", iter, delta);
         if delta < criteria || iter > maxiter {
             println!("SCF finished!");
             break;
@@ -371,9 +355,5 @@ fn scf(
 
 fn main() {
     let args = Args::parse();
-
-    // collect the required integrals
     hf_calc(args.n, args.r, args.zeta1, args.zeta2, args.za, args.zb)
-
-    // Run SCF iterations until convergence
 }
