@@ -28,12 +28,12 @@ pub mod integrals {
         b: f64,
         c: f64,
         d: f64,
-        r_ab: f64,
-        r_cd: f64,
+        r_ij: f64,
+        r_kl: f64,
         r_pq: f64,
     ) -> f64 {
         (2. * PI).powf(2.5) / ((a + b) * (c * d) * (a + b + c + d).powf(0.5))
-            * (-a * b / (a + b) * r_ab.powf(2.) - c * d / (c + d) * r_cd.powf(2.)).exp()
+            * (-a * b / (a + b) * r_ij.powf(2.) - c * d / (c + d) * r_kl.powf(2.)).exp()
             * f_0((a + b) * (c + d) / (a + b + c + d) * r_pq)
     }
 }
